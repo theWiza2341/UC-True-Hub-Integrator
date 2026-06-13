@@ -27,7 +27,7 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
           echo "Starting bot..."
-          node bot.js
+          node src/bot.js
 
       - name: Commit updated decks.json
         run: |
