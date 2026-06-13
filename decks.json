@@ -25,16 +25,30 @@
       "publishedAt": "2026-06-13T01:53:30.045Z"
     },
     {
+      "messageId": "1515142579048415272",
       "season": "s119",
       "channel": "skt-evil-kindness",
       "author": "wiza0",
-      "deckCode": "eyJzb3VsIjoiS0lORE5FU1MiLCJjYXJkSWRzIjpbNyw2MTcsNjE5LDIyNiwzMTIsMTE1LDUzOCw5MzIsMjg1LDg2OSwyOSw4MTAsMzE0LDkyLDE0NywxMjIsOTA1LDExMSwxNDQsNzEwLDk0MywyNyw1MDMsNTAzLDUwNV0sImFydGlmYWN0SWRzIjpbOCwzNl19=",
+      "deckCode": "eyJzb3VsIjoiS0lORE5FU1MiLCJjYXJkSWRzIjpbNyw2MTcsNjE5LDIyNiwzMTIsMTE1LDUzOCw5MzIsMjg1LDg2OSwyOSw4MTAsMzE0LDkyLDE0NywxMjIsOTA1LDExMSwxNDQsNzEwLDk0MywyNyw1MDMsNTAzLDUwNV0sImFydGlmYWN0SWRzIjpbOCwzNl20=",
       "record": {
-        "wins": 21,
-        "losses": 1
+        "wins": 22,
+        "losses": 2
       },
-      "notes": "21-1 to top 1 on one acc and S on the other (30 min queue)\n\n(33-3 actual record with all builds and ranks)\n\nlost to shit starting hand which was fine bc i can play for evil plan nvm i topdeck skris on the turn i win if i draw anything but skris)))\n\ni'm not happy with rein here but draw is worse and rein ensures you can live if skris is bottom 5\n\nsnoelle is here bc she is overstatted and can paralyze stuff like rk or chujin while also being good into zoo bc para + haste (that heals with kindness)\n\ndeck takes a lot of skill to pilot primarily bc of matchup knowledge and bc you need to account for what you will do if you topdeck X card. it's probably easy to mistake losses that are 100% your fault for losses to rng when using this",
+      "notes": "22-2 to top 1 on one acc and S on the other (30 min queue)\n\n(33-3 actual record with all builds and ranks)\n\nlost to shit starting hand which was fine bc i can play for evil plan nvm i topdeck skris on the turn i win if i draw anything but skris)))\n\ni'm not happy with rein here but draw is worse and rein ensures you can live if skris is bottom 5\n\nsnoelle is here bc she is overstatted and can paralyze stuff like rk or chujin while also being good into zoo bc para + haste (that heals with kindness)\n\ndeck takes a lot of skill to pilot primarily bc of matchup knowledge and bc you need to account for what you will do if you topdeck X card. it's probably easy to mistake losses that are 100% your fault for losses to rng when using this",
       "publishedAt": "2026-06-12T23:55:40.833Z"
+    },
+    {
+      "messageId": "1515233818691506178",
+      "season": "s119",
+      "channel": "ball-justice",
+      "author": "LuckySpin",
+      "deckCode": "eyJzb3VsIjoiSlVTVElDRSIsImNhcmRJZHMiOlszOTAsMzkwLDM5MCwyOSwyOSwyOSw1Myw1Myw0MDksNDA5LDE0NiwxNDYsMTQ2LDI5MSwyOTEsMjkxLDIwLDIwLDIwLDk4LDk4LDk4LDU0Nyw4MjksOTM1XSwiYXJ0aWZhY3RJZHMiOlsyLDUzXX0=",
+      "record": {
+        "wins": 16,
+        "losses": 4
+      },
+      "notes": "ball justice\n16-4 in S rank and above\n\nmulligan away from undyne's spears, and mulligan for bomb, napstablook, diamond boy 2, and striped bird. other mulligan stuff is based on vibes\n\nthis deck wins by doing 30 damage to the opponent. this is true of every deck, but it's important to keep this in mind for this deck in particular",
+      "publishedAt": "2026-06-13T05:58:14.059Z"
     }
   ]
 }
