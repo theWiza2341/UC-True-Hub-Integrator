@@ -13,8 +13,6 @@ const fs = require("fs");
 
 const OUTPUT_PATH = path.join(__dirname, "..", "decks.json");
 
-fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2), "utf-8");
-
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -173,7 +171,7 @@ function loadExistingDecks() {
 function saveDecks(decks) {
 
     fs.writeFileSync(
-        "decks.json",
+        OUTPUT_PATH,
         JSON.stringify(
             { decks },
             null,
@@ -328,16 +326,19 @@ client.once(
         // -----------------------------
         // Track channels already known
         // -----------------------------
-        const existingByChannel =
-            new Map(
-                existingDecks.map(
-                    deck => [
-                        deck.channel,
-                        deck
-                    ]
-                )
-            );
+        const existingByChannel = new Map(
+            existingDecks.map(deck => [
+                `${deck.season}:${deck.channel}`,
+                deck
+            ])
+        );
 
+        const existingByMessage = new Set(
+            existingDecks
+                .map(deck => deck.messageId)
+                .filter(Boolean)
+        );
+        
         let added = 0;
         let updated = 0;
 
@@ -382,6 +383,16 @@ client.once(
                                 b.createdTimestamp
                         );
 
+                // -----------------------------
+                // BUG FIX #3: skip already-known deck messages
+                // -----------------------------
+                const unseen = sorted.filter(msg => !existingByMessage.has(msg.id));
+
+                if (unseen.length === 0) {
+                    console.log("No new messages in this channel.");
+                    continue;
+                }
+                
                 let deckIndex =
                     -1;
 
@@ -396,12 +407,12 @@ client.once(
                 // -------------------------
                 for (
                     let i = 0;
-                    i < sorted.length;
+                    i < unseen.length;
                     i++
                 ) {
 
                     const msg =
-                        sorted[i];
+                        unseen[i];
 
                     const code =
                         extractDeckCode(
@@ -530,9 +541,7 @@ client.once(
                 };
 
                 const existing =
-                    existingByChannel.get(
-                        channel.name
-                    );
+                    existingByChannel.get(`${channel.parent?.name}:${channel.name}`)
 
                 // -------------------------
                 // New deck
