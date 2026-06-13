@@ -129,7 +129,7 @@ function exportDecksToFile(decks) {
     };
 
     fs.writeFileSync(
-        "decks.json",
+        OUTPUT_PATH,
         JSON.stringify(output, null, 2),
         "utf-8"
     );
