@@ -20,14 +20,16 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
+        working-directory: src
         run: npm ci
 
       - name: Run Discord scraper
+        working-directory: src
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
           echo "Starting bot..."
-          node src/bot.js
+          node bot.js
 
       - name: Commit updated decks.json
         run: |
