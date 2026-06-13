@@ -298,45 +298,53 @@ client.once("clientReady", async () => {
             }
 
             // -------------------------------------------------
-            // CREATOR WINDOW (deck + next 2 messages)
+            // CONTEXT WINDOW (FIX)
             // -------------------------------------------------
-            const window =
-                sorted.slice(deckIndex, deckIndex + 3);
+            // look BEFORE and AFTER deck message
+            const window = sorted.slice(
+                Math.max(0, deckIndex - 5),
+                Math.min(sorted.length, deckIndex + 3)
+            );
 
-            let authorName = null;
+            // -------------------------------------------------
+            // EXTRACT FIELDS FROM WINDOW
+            // -------------------------------------------------
 
+            let record = null;
+            let authorName = deckMessage.author.username;
+
+            // scan ALL messages in window
             for (const msg of window) {
 
-                const creator =
-                    extractCreator(msg.content);
+                // record (first valid wins)
+                if (!record) {
+                    record = extractRecord(msg.content);
+                }
 
-                if (!creator) continue;
+                // creator (first valid wins)
+                const creator = extractCreator(msg.content);
 
-                const resolved =
-                    await resolveUser(client, creator);
-
-                if (resolved) {
-                    authorName = resolved;
-                    break;
+                if (creator) {
+                    const resolved = await resolveUser(client, creator);
+                    if (resolved) {
+                        authorName = resolved;
+                        break;
+                    }
                 }
             }
 
-            if (!authorName) {
-                authorName =
-                    deckMessage.author.username;
-            }
+            // -------------------------------------------------
+            // BUILD NOTES FROM FULL CONTEXT
+            // -------------------------------------------------
+            const cleanedNotes = window
+                .map(m => m.content)
+                .join("\n\n")
+                .replace(deckCode, "")
+                .trim();
 
             // -------------------------------------------------
             // BUILD DECK OBJECT
             // -------------------------------------------------
-            const record =
-                extractRecord(deckMessage.content);
-
-            const cleanedNotes =
-                deckMessage.content
-                    .replace(deckCode, "")
-                    .trim();
-
             const deckData = {
                 messageId: deckMessage.id,
                 season: channel.parent?.name,
@@ -347,20 +355,6 @@ client.once("clientReady", async () => {
                 notes: cleanedNotes,
                 publishedAt: deckMessage.createdAt.toISOString()
             };
-
-            console.log("\n✔ Parsed Deck:");
-            console.log(deckData);
-
-            finalDecks.push(deckData);
-
-        }
-        catch (error) {
-            console.error(
-                `Failed #${channel.name}:`,
-                error.message
-            );
-        }
-    }
 
     // -------------------------------------------------
     // EXPORT STEP
