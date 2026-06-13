@@ -40,17 +40,19 @@ function extractDeckCode(text) {
 }
 
 function extractRecord(text) {
+
     if (!text) return null;
 
-    // Normalize spacing first (cheap + helps matching)
-    const cleaned = text.toLowerCase().replace(/\s+/g, " ").trim();
+    const cleaned =
+        text.toLowerCase();
 
     let match;
 
-    // -------------------------------------------------
-    // FORMAT 1: "11-1" or "11 - 1"
-    // -------------------------------------------------
-    match = cleaned.match(/(\d{1,3})\s*-\s*(\d{1,3})/);
+    // 17-3 / 17 - 3 / Unicode dashes
+    match = cleaned.match(
+        /(\d{1,3})\s*[-–—]\s*(\d{1,3})/
+    );
+
     if (match) {
         return {
             wins: Number(match[1]),
@@ -58,10 +60,11 @@ function extractRecord(text) {
         };
     }
 
-    // -------------------------------------------------
-    // FORMAT 2: "11 to 1"
-    // -------------------------------------------------
-    match = cleaned.match(/(\d{1,3})\s+to\s+(\d{1,3})/);
+    // 17/3
+    match = cleaned.match(
+        /(\d{1,3})\s*\/\s*(\d{1,3})/
+    );
+
     if (match) {
         return {
             wins: Number(match[1]),
@@ -69,10 +72,35 @@ function extractRecord(text) {
         };
     }
 
-    // -------------------------------------------------
-    // FORMAT 3: "11 wins 1 loss" / "11 wins 2 losses"
-    // -------------------------------------------------
-    match = cleaned.match(/(\d{1,3})\s+wins?\s+(\d{1,3})\s+loss(?:es)?/);
+    // 17 to 3
+    match = cleaned.match(
+        /(\d{1,3})\s+to\s+(\d{1,3})/
+    );
+
+    if (match) {
+        return {
+            wins: Number(match[1]),
+            losses: Number(match[2])
+        };
+    }
+
+    // 17 wins 3 losses
+    match = cleaned.match(
+        /(\d{1,3})\s+wins?\s+(\d{1,3})\s+loss(?:es)?/
+    );
+
+    if (match) {
+        return {
+            wins: Number(match[1]),
+            losses: Number(match[2])
+        };
+    }
+
+    // 17W 3L
+    match = cleaned.match(
+        /(\d{1,3})\s*w\s*(\d{1,3})\s*l\b/
+    );
+
     if (match) {
         return {
             wins: Number(match[1]),
