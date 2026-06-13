@@ -22,14 +22,16 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
+        working-directory: src
         run: npm ci
 
       - name: Run incremental sync
+        working-directory: src
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
           echo "Starting incremental sync..."
-          node src/new-only-sync.js
+          node new-only-sync.js
 
       - name: Commit updated decks.json
         run: |
