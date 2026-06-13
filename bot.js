@@ -277,14 +277,13 @@ client.once("clientReady", async () => {
                     .trim();
 
             const deckData = {
+                messageId: deckMessage.id,
                 season: channel.parent?.name,
                 channel: channel.name,
                 author: authorName,
                 deckCode: normalizeDeckCode(deckCode),
                 record,
                 notes: cleanedNotes,
-
-                // ⭐ FINAL ADDITION
                 publishedAt: deckMessage.createdAt.toISOString()
             };
 
