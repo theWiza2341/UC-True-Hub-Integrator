@@ -1,1 +1,38 @@
+name: Sync True Hub Decks
 
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # every 6 hours
+  workflow_dispatch:      # manual run button
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Discord scraper
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: node index.js
+
+      - name: Commit updated decks.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add decks.json
+
+          git commit -m "Update decks.json [auto]" || echo "No changes to commit"
+
+          git push
