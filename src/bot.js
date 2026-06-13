@@ -13,8 +13,6 @@ const fs = require("fs");
 
 const OUTPUT_PATH = path.join(__dirname, "..", "decks.json");
 
-fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2), "utf-8");
-
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
