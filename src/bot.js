@@ -39,15 +39,45 @@ function extractDeckCode(text) {
 function extractRecord(text) {
     if (!text) return null;
 
-    const match =
-        text.match(/\b(\d{1,3})-(\d{1,3})\b/);
+    // Normalize spacing first (cheap + helps matching)
+    const cleaned = text.toLowerCase().replace(/\s+/g, " ").trim();
 
-    if (!match) return null;
+    let match;
 
-    return {
-        wins: Number(match[1]),
-        losses: Number(match[2])
-    };
+    // -------------------------------------------------
+    // FORMAT 1: "11-1" or "11 - 1"
+    // -------------------------------------------------
+    match = cleaned.match(/(\d{1,3})\s*-\s*(\d{1,3})/);
+    if (match) {
+        return {
+            wins: Number(match[1]),
+            losses: Number(match[2])
+        };
+    }
+
+    // -------------------------------------------------
+    // FORMAT 2: "11 to 1"
+    // -------------------------------------------------
+    match = cleaned.match(/(\d{1,3})\s+to\s+(\d{1,3})/);
+    if (match) {
+        return {
+            wins: Number(match[1]),
+            losses: Number(match[2])
+        };
+    }
+
+    // -------------------------------------------------
+    // FORMAT 3: "11 wins 1 loss" / "11 wins 2 losses"
+    // -------------------------------------------------
+    match = cleaned.match(/(\d{1,3})\s+wins?\s+(\d{1,3})\s+loss(?:es)?/);
+    if (match) {
+        return {
+            wins: Number(match[1]),
+            losses: Number(match[2])
+        };
+    }
+
+    return null;
 }
 
 
