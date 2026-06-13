@@ -37,73 +37,30 @@ function extractDeckCode(text) {
 }
 
 function extractRecord(text) {
-
     if (!text) return null;
 
-    const cleaned =
-        text.toLowerCase();
-
+    const cleaned = text.toLowerCase();
     let match;
 
-    // 17-3 / 17 - 3 / Unicode dashes
-    match = cleaned.match(
-        /(\d{1,3})\s*[-–—]\s*(\d{1,3})/
-    );
-
-    if (match) {
-        return {
-            wins: Number(match[1]),
-            losses: Number(match[2])
-        };
-    }
+    // 17-3 / 17 - 3 / unicode dashes
+    match = cleaned.match(/(\d{1,3})\s*[-–—]\s*(\d{1,3})/);
+    if (match) return { wins: +match[1], losses: +match[2] };
 
     // 17/3
-    match = cleaned.match(
-        /(\d{1,3})\s*\/\s*(\d{1,3})/
-    );
-
-    if (match) {
-        return {
-            wins: Number(match[1]),
-            losses: Number(match[2])
-        };
-    }
+    match = cleaned.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+    if (match) return { wins: +match[1], losses: +match[2] };
 
     // 17 to 3
-    match = cleaned.match(
-        /(\d{1,3})\s+to\s+(\d{1,3})/
-    );
-
-    if (match) {
-        return {
-            wins: Number(match[1]),
-            losses: Number(match[2])
-        };
-    }
+    match = cleaned.match(/(\d{1,3})\s+to\s+(\d{1,3})/);
+    if (match) return { wins: +match[1], losses: +match[2] };
 
     // 17 wins 3 losses
-    match = cleaned.match(
-        /(\d{1,3})\s+wins?\s+(\d{1,3})\s+loss(?:es)?/
-    );
-
-    if (match) {
-        return {
-            wins: Number(match[1]),
-            losses: Number(match[2])
-        };
-    }
+    match = cleaned.match(/(\d{1,3})\s+wins?\s+(\d{1,3})\s+loss(?:es)?/);
+    if (match) return { wins: +match[1], losses: +match[2] };
 
     // 17W 3L
-    match = cleaned.match(
-        /(\d{1,3})\s*w\s*(\d{1,3})\s*l\b/
-    );
-
-    if (match) {
-        return {
-            wins: Number(match[1]),
-            losses: Number(match[2])
-        };
-    }
+    match = cleaned.match(/(\d{1,3})\s*w\s*(\d{1,3})\s*l\b/);
+    if (match) return { wins: +match[1], losses: +match[2] };
 
     return null;
 }
@@ -114,36 +71,19 @@ function extractRecord(text) {
 // =====================================================
 
 function extractCreator(text) {
-
     if (!text) return null;
 
-    const lower =
-        text.toLowerCase();
+    const lower = text.toLowerCase();
+    if (!lower.includes("creator")) return null;
 
-    if (!lower.includes("creator")) {
-        return null;
+    let match = text.match(/<@!?(\d+)>/);
+    if (match) {
+        return { type: "id", value: match[1] };
     }
 
-    // CASE 1: Discord mention <@id>
-    let match =
-        text.match(/<@!?(\d+)>/);
-
+    match = text.match(/creator[:\s]+@?([\w\-]+)/i);
     if (match) {
-        return {
-            type: "id",
-            value: match[1]
-        };
-    }
-
-    // CASE 2: creator @name / creator name / creator: name
-    match =
-        text.match(/creator[:\s]+@?([\w\-]+)/i);
-
-    if (match) {
-        return {
-            type: "name",
-            value: match[1]
-        };
+        return { type: "name", value: match[1] };
     }
 
     return null;
@@ -155,19 +95,12 @@ function extractCreator(text) {
 // =====================================================
 
 async function resolveUser(client, creator) {
-
     try {
-
         if (creator.type === "id") {
-
-            const user =
-                await client.users.fetch(creator.value);
-
+            const user = await client.users.fetch(creator.value);
             return user.username;
         }
-
         return creator.value;
-
     } catch {
         return null;
     }
@@ -175,14 +108,11 @@ async function resolveUser(client, creator) {
 
 
 // =====================================================
-// EXPORT FUNCTION
+// EXPORT
 // =====================================================
 
 function exportDecksToFile(decks) {
-
-    const output = {
-        decks
-    };
+    const output = { decks };
 
     fs.writeFileSync(
         OUTPUT_PATH,
@@ -202,8 +132,7 @@ client.once("clientReady", async () => {
 
     console.log(`Logged in as ${client.user.tag}`);
 
-    const guild =
-        client.guilds.cache.first();
+    const guild = client.guilds.cache.first();
 
     if (!guild) {
         console.log("No guilds found.");
@@ -213,74 +142,51 @@ client.once("clientReady", async () => {
 
     console.log(`\nScanning "${guild.name}"...`);
 
-    const channels =
-        await guild.channels.fetch();
+    const channels = await guild.channels.fetch();
 
     const relevantChannels = [];
 
-    // -------------------------------------------------
-    // FILTER: only s### text channels
-    // -------------------------------------------------
+    // only s### text channels
     channels.forEach(channel => {
-
         if (!channel) return;
 
-        const parentName =
-            channel.parent?.name ?? "None";
+        const parentName = channel.parent?.name ?? "";
+        const isText = channel.type === ChannelType.GuildText;
+        const isSeason = /^s\d+$/.test(parentName);
 
-        const isTextChannel =
-            channel.type === ChannelType.GuildText;
-
-        const isTrueHubCategory =
-            /^s\d+$/.test(parentName);
-
-        if (isTextChannel && isTrueHubCategory) {
+        if (isText && isSeason) {
             relevantChannels.push(channel);
         }
     });
 
-    console.log(
-        `Found ${relevantChannels.length} relevant channels:\n`
-    );
+    console.log(`Found ${relevantChannels.length} relevant channels\n`);
 
     const finalDecks = [];
 
-    // -------------------------------------------------
-    // PROCESS EACH CHANNEL
-    // -------------------------------------------------
+    // =================================================
+    // PROCESS CHANNELS
+    // =================================================
     for (const channel of relevantChannels) {
 
-        console.log(
-            `\nScanning #${channel.name} (${channel.parent.name})`
-        );
+        console.log(`Scanning #${channel.name}`);
 
         try {
 
-            const messages =
-                await channel.messages.fetch({
-                    limit: 100
-                });
+            const messages = await channel.messages.fetch({ limit: 100 });
 
-            if (messages.size === 0) {
-                console.log("No messages found.");
-                continue;
-            }
+            if (messages.size === 0) continue;
 
-            const sorted =
-                [...messages.values()]
-                    .sort((a, b) =>
-                        a.createdTimestamp - b.createdTimestamp
-                    );
+            const sorted = [...messages.values()]
+                .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
-            // -------------------------------------------------
-            // FIND FIRST VALID DECK MESSAGE
-            // -------------------------------------------------
+            // ---------------------------------------------
+            // FIND DECK MESSAGE
+            // ---------------------------------------------
             let deckIndex = -1;
             let deckMessage = null;
             let deckCode = null;
 
             for (let i = 0; i < sorted.length; i++) {
-
                 const msg = sorted[i];
                 const code = extractDeckCode(msg.content);
 
@@ -293,58 +199,46 @@ client.once("clientReady", async () => {
             }
 
             if (!deckMessage) {
-                console.log("No valid deck message found.");
+                console.log("No deck found");
                 continue;
             }
 
-            // -------------------------------------------------
-            // CONTEXT WINDOW (FIX)
-            // -------------------------------------------------
-            // look BEFORE and AFTER deck message
+            // ---------------------------------------------
+            // CONTEXT WINDOW (IMPORTANT FIX)
+            // ---------------------------------------------
             const window = sorted.slice(
                 Math.max(0, deckIndex - 5),
                 Math.min(sorted.length, deckIndex + 3)
             );
 
-            // -------------------------------------------------
-            // EXTRACT FIELDS FROM WINDOW
-            // -------------------------------------------------
-
             let record = null;
             let authorName = deckMessage.author.username;
 
-            // scan ALL messages in window
             for (const msg of window) {
 
-                // record (first valid wins)
                 if (!record) {
                     record = extractRecord(msg.content);
                 }
 
-                // creator (first valid wins)
                 const creator = extractCreator(msg.content);
-
                 if (creator) {
                     const resolved = await resolveUser(client, creator);
-                    if (resolved) {
-                        authorName = resolved;
-                        break;
-                    }
+                    if (resolved) authorName = resolved;
                 }
             }
 
-            // -------------------------------------------------
-            // BUILD NOTES FROM FULL CONTEXT
-            // -------------------------------------------------
+            // ---------------------------------------------
+            // NOTES FROM CONTEXT WINDOW
+            // ---------------------------------------------
             const cleanedNotes = window
                 .map(m => m.content)
                 .join("\n\n")
                 .replace(deckCode, "")
                 .trim();
 
-            // -------------------------------------------------
-            // BUILD DECK OBJECT
-            // -------------------------------------------------
+            // ---------------------------------------------
+            // BUILD DECK
+            // ---------------------------------------------
             const deckData = {
                 messageId: deckMessage.id,
                 season: channel.parent?.name,
@@ -356,9 +250,18 @@ client.once("clientReady", async () => {
                 publishedAt: deckMessage.createdAt.toISOString()
             };
 
-    // -------------------------------------------------
-    // EXPORT STEP
-    // -------------------------------------------------
+            finalDecks.push(deckData);
+
+            console.log("✔ Parsed deck");
+
+        } catch (error) {
+            console.error(`Failed #${channel.name}:`, error.message);
+        }
+    }
+
+    // =================================================
+    // EXPORT
+    // =================================================
     exportDecksToFile(finalDecks);
 
     console.log("\n======================");
