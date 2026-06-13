@@ -1,61 +1,40 @@
-[
+{
+  "decks": [
     {
-        "name": "Skt Bullshit Patience",
-        "soul": "PATIENCE",
-        "author": "Sktima",
-        "season": 118,
-        "wins": 19,
-        "losses": 1,
-        "deckCode": "eyJzb3VsIjoiUEFUSUVOQ0UiLCJjYXJkSWRzIjpbNTE4LDc0LDc0LDgxMSw4MTEsODExLDQ1Nyw0NTcsNDU3LDcxLDcxLDcxLDI2MCwyNjAsMjYwLDczNyw3MzcsNjAwLDYwMCw5MjIsMTgyLDE4Miw4NjEsODMyLDgzMl0sImFydGlmYWN0SWRzIjpbNTBdfQ==",
-        "thumbnailCard": "Dunebud",
-        "artifactIds": [
-            50
-        ],
-        "publishedAt": "2026-05-01T19:13:00.000Z"
+      "season": "s118",
+      "channel": "skt-bullshit-patience",
+      "author": "wiza0",
+      "deckCode": "eyJzb3VsIjoiUEFUSUVOQ0UiLCJjYXJkSWRzIjpbNTE4LDc0LDc0LDgxMSw4MTEsODExLDQ1Nyw0NTcsNDU3LDcxLDcxLDcxLDI2MCwyNjAsMjYwLDczNyw3MzcsNjAwLDYwMCw5MjIsMTgyLDE4Miw4NjEsODMyLDgzMl0sImFydGlmYWN0SWRzIjpbNTBdfQ==",
+      "record": {
+        "wins": 9,
+        "losses": 1
+      },
+      "notes": "9-1 from A to legend. The only loss was to me getting pizza, fucking up that turn, and then grossly miscounting my damage on the following one\n\nAKA hitler patience, aka sequel to ⁠skt-bullshit-integ \n\nHard mulligan for dunebud. Your ideal opener is dunebud + replica. \n\nIf they don't answer it, you basically win vs anything board-centric but you may get cheesed — if you're really afraid of that your anti cheese options include playing a bag or tall miner to force them to respond, having 2 ice shocks in hand, or using frozen energy to strengthen your board (in order of preference).\n\nIf they do answer it, look for a 2g spell off your change of winds — if you find it, you can immediately retaliate with dunebud + 2g spell from hand + cost-reduced 1g spell from topdeck.\n\nThat's it. Keep your sweet little bundle of cancer all over the board until you get enough chip damage and gold to simply burn people with gemstones/shards. Don't be afraid of playing miner/bag for tempo but keep track of how many you have left (replica helps).\n\nThe biggest skill factors are ordering (which can get complicated here especially since this is a very APMy deck) and hand management. A lot of long-term hand management.\n\nCooler cooler is your flex slot. Replace it as you will. I chose this card bc it's a budget 4th dunebud (this deck REALLY wants dunebud tho) and if drawn on t2 as p2 vs zoo, with fenergy it can trade into a 1 atk monster and make them wish they played league of legends instead of this game.\n\nRemember that 2-3-4 bags can also output huge damage and it is more gold efficient than miner if you have the spells for it. This will come up rarely, but it will come up.\n\nYou can actually run this with no DT. Vessel is not that strong here, though it helps.",
+      "publishedAt": "2026-06-12T23:57:46.666Z"
     },
     {
-        "name": "Electric Soul",
-        "soul": "BRAVERY",
-        "author": "Casdyne",
-        "season": 118,
-        "wins": 18,
-        "losses": 4,
-        "deckCode": "eyJzb3VsIjoiQlJBVkVSWSIsImNhcmRJZHMiOls0NTQsNDU0LDQ1NCw0MzMsNTYzLDU2Myw2MTcsNjE5LDYxOSw2MTksNzksNzksMTE1LDExNSwxMTUsNTYyLDU2Miw4NTcsODU3LDc2LDc2LDU0LDI5NiwyOTYsNTA1XSwiYXJ0aWZhY3RJZHMiOlszMiw3M119",
-        "thumbnailCard": "Rock_Chord",
-        "artifactIds": [
-            32,
-            73
-        ],
-        "publishedAt": "2026-05-17T18:49:00.000Z"
+      "season": "s117",
+      "channel": "feast-cage",
+      "author": "LuckySpin",
+      "deckCode": "eyJzb3VsIjoiS0lORE5FU1MiLCJjYXJkSWRzIjpbMTk2LDE5NiwxOTYsNyw3LDcsNjE3LDYxNyw2MTcsMzEyLDMxMiwzMTIsMTE1LDExNSwxMTUsNjIxLDYyMSw2MjEsMjc3LDI3NywyNzcsOTQsOTQsOTQsOTM1XSwiYXJ0aWZhY3RJZHMiOls1Myw2MV19=",
+      "record": {
+        "wins": 66,
+        "losses": 13
+      },
+      "notes": "feast cage\n66-13 (83% wr) in top ranks\n\nhard mulligan for mauscage\n\nplay to maximize your chances of drawing mauscage (i.e. deckthin with snailmobile early)\n\ndo not spam 0/1 drops in some matchups where it's better to save them for a big feast play turns 3/4\n\ndo not greed mauswheel\n\nbeyond that it's pretty standard zoo, keep in mind your only burst is loox and rory, so constant board dominance is essential\n\n\n\ndownload_-_2026-04-19T212619.506.png\n\nScreenshot_20260428_095341_Chrome.jpg\n\nScreenshot_20260428_124839_Chrome.jpg\n\ncreator: @LuckySpin",
+      "publishedAt": "2026-06-13T01:53:30.045Z"
     },
     {
-        "name": "Titan Midness",
-        "soul": "KINDNESS",
-        "author": "Pk Moritz",
-        "season": 118,
-        "wins": 16,
-        "losses": 4,
-        "deckCode": "eyJzb3VsIjoiS0lORE5FU1MiLCJjYXJkSWRzIjpbMTE1LDExNSwxMTUsMzE0LDMxNCw5Miw5Miw5MiwzMDcsMzA3LDMwNyw1MTIsNTEyLDUxMiw1MjQsODMzLDgzMyw5MDcsOTA3LDkwNyw5MDYsOTA2LDkwNiw4MjYsOTAxXSwiYXJ0aWZhY3RJZHMiOls0LDUzXX0=",
-        "thumbnailCard": "Titan",
-        "artifactIds": [
-            4,
-            53
-        ],
-        "publishedAt": "2026-05-17T18:50:00.000Z"
-    },
-    {
-        "name": "Titan Fuzzy PV",
-        "soul": "PERSEVERANCE",
-        "author": "mark_callisto",
-        "season": 118,
-        "wins": 17,
-        "losses": 3,
-        "deckCode": "eyJzb3VsIjoiUEVSU0VWRVJBTkNFIiwiY2FyZElkcyI6Wzg3LDg3LDExNSwxMTUsOTMxLDkzMSw5MzEsODYsODYsODYsNTE1LDUxNSwyNjEsMjYxLDI2MSw2NTYsNjU2LDUxMiw1MTIsODMyLDgzMiw1Miw5MCw4NTgsNTA1XSwiYXJ0aWZhY3RJZHMiOls4LDI2XX0",
-        "thumbnailCard": "Titan_Fuzzy",
-        "artifactIds": [
-            8,
-            26
-        ],
-        "publishedAt": "2026-05-17T18:51:00.000Z"
+      "season": "s119",
+      "channel": "skt-evil-kindness",
+      "author": "wiza0",
+      "deckCode": "eyJzb3VsIjoiS0lORE5FU1MiLCJjYXJkSWRzIjpbNyw2MTcsNjE5LDIyNiwzMTIsMTE1LDUzOCw5MzIsMjg1LDg2OSwyOSw4MTAsMzE0LDkyLDE0NywxMjIsOTA1LDExMSwxNDQsNzEwLDk0MywyNyw1MDMsNTAzLDUwNV0sImFydGlmYWN0SWRzIjpbOCwzNl19=",
+      "record": {
+        "wins": 21,
+        "losses": 1
+      },
+      "notes": "21-1 to top 1 on one acc and S on the other (30 min queue)\n\n(33-3 actual record with all builds and ranks)\n\nlost to shit starting hand which was fine bc i can play for evil plan nvm i topdeck skris on the turn i win if i draw anything but skris)))\n\ni'm not happy with rein here but draw is worse and rein ensures you can live if skris is bottom 5\n\nsnoelle is here bc she is overstatted and can paralyze stuff like rk or chujin while also being good into zoo bc para + haste (that heals with kindness)\n\ndeck takes a lot of skill to pilot primarily bc of matchup knowledge and bc you need to account for what you will do if you topdeck X card. it's probably easy to mistake losses that are 100% your fault for losses to rng when using this",
+      "publishedAt": "2026-06-12T23:55:40.833Z"
     }
-]
+  ]
+}
