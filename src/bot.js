@@ -26,14 +26,10 @@ const client = new Client({
 // HELPERS
 // =====================================================
 
-function normalizeDeckCode(code) {
-    if (!code) return null;
-    return code.endsWith("=") ? code : code + "=";
-}
-
 function extractDeckCode(text) {
     if (!text) return null;
-    return text.match(/eyJ[A-Za-z0-9+/=]+/)?.[0] ?? null;
+    // Handles both standard base64 (+, /) and URL-safe base64 (-, _)
+    return text.match(/eyJ[A-Za-z0-9+/=\-_]+/)?.[0] ?? null;
 }
 
 function extractRecord(text) {
@@ -199,12 +195,16 @@ client.once("clientReady", async () => {
             }
 
             if (!deckMessage) {
-                console.log("No deck found");
+                console.log("  No deck found.");
+                // Print first 10 message previews to help debug missing codes
+                sorted.slice(0, 10).forEach((msg, i) => {
+                    console.log(`  [${i + 1}] ${msg.content.slice(0, 80).replace(/\n/g, " ")}`);
+                });
                 continue;
             }
 
             // ---------------------------------------------
-            // CONTEXT WINDOW (IMPORTANT FIX)
+            // CONTEXT WINDOW
             // ---------------------------------------------
             const window = sorted.slice(
                 Math.max(0, deckIndex - 5),
@@ -238,13 +238,15 @@ client.once("clientReady", async () => {
 
             // ---------------------------------------------
             // BUILD DECK
+            // deckCode stored exactly as posted —
+            // padding (= or ==) is handled by the userscript at decode time
             // ---------------------------------------------
             const deckData = {
                 messageId: deckMessage.id,
                 season: channel.parent?.name,
                 channel: channel.name,
                 author: authorName,
-                deckCode: normalizeDeckCode(deckCode),
+                deckCode,
                 record,
                 notes: cleanedNotes,
                 publishedAt: deckMessage.createdAt.toISOString()
@@ -252,10 +254,10 @@ client.once("clientReady", async () => {
 
             finalDecks.push(deckData);
 
-            console.log("✔ Parsed deck");
+            console.log("  ✔ Parsed deck");
 
         } catch (error) {
-            console.error(`Failed #${channel.name}:`, error.message);
+            console.error(`  Failed #${channel.name}:`, error.message);
         }
     }
 
