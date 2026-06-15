@@ -8,8 +8,8 @@ const {
     ChannelType
 } = require("discord.js");
 
-const path = require("path");
 const fs = require("fs");
+const path = require("path");
 
 const OUTPUT_PATH = path.join(__dirname, "..", "decks.json");
 
@@ -21,55 +21,17 @@ const client = new Client({
     ]
 });
 
-
 // =====================================================
 // HELPERS
 // =====================================================
 
-// FIXED: supports multi-line deck codes safely
 function extractDeckCode(text) {
     if (!text) return null;
 
-    // normalize all whitespace into single spaces
-    const normalized = text.replace(/\r/g, "");
-    const lines = normalized.split("\n");
-
-    let buffer = "";
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        if (!line) continue;
-
-        // If line contains base64 start, begin capture
-        if (line.includes("eyJ")) {
-            buffer = line;
-
-            // also absorb next lines if they look like continuation
-            for (let j = i + 1; j < lines.length; j++) {
-                const next = lines[j].trim();
-
-                // stop if we hit obvious non-code content
-                if (
-                    next.includes("creator") ||
-                    next.includes("wins") ||
-                    next.includes("loss") ||
-                    next.length > 200
-                ) break;
-
-                buffer += next;
-            }
-
-            const match = buffer.match(/eyJ[A-Za-z0-9+/=\-_]+/);
-            if (match) return match[0];
-        }
-    }
-
-    return null;
+    const match = text.match(/eyJ[A-Za-z0-9+/=\-_]+/);
+    return match?.[0] ?? null;
 }
 
-
-// unchanged but safe
 function extractRecord(text) {
     if (!text) return null;
 
@@ -94,58 +56,34 @@ function extractRecord(text) {
     return null;
 }
 
-
 // =====================================================
-// CREATOR DETECTION
+// MULTI-MESSAGE DECK DETECTION (CRITICAL FIX)
 // =====================================================
 
-function extractCreator(text) {
-    if (!text) return null;
+function findDeckInMessages(sorted) {
 
-    const lower = text.toLowerCase();
-    if (!lower.includes("creator")) return null;
+    // scan newest → oldest
+    for (let i = 0; i < sorted.length; i++) {
 
-    let match = text.match(/<@!?(\d+)>/);
-    if (match) return { type: "id", value: match[1] };
+        let buffer = "";
 
-    match = text.match(/creator[:\s]+@?([\w\-]+)/i);
-    if (match) return { type: "name", value: match[1] };
+        // build context window (captures split codes)
+        for (let j = i; j < Math.min(i + 6, sorted.length); j++) {
+            buffer += "\n" + (sorted[j].content || "");
+        }
+
+        const code = extractDeckCode(buffer);
+
+        if (code) {
+            return {
+                index: i,
+                code
+            };
+        }
+    }
 
     return null;
 }
-
-
-// =====================================================
-// USER RESOLVER
-// =====================================================
-
-async function resolveUser(client, creator) {
-    try {
-        if (creator.type === "id") {
-            const user = await client.users.fetch(creator.value);
-            return user.username;
-        }
-        return creator.value;
-    } catch {
-        return null;
-    }
-}
-
-
-// =====================================================
-// EXPORT
-// =====================================================
-
-function exportDecksToFile(decks) {
-    fs.writeFileSync(
-        OUTPUT_PATH,
-        JSON.stringify({ decks }, null, 2),
-        "utf-8"
-    );
-
-    console.log("\n✔ decks.json updated");
-}
-
 
 // =====================================================
 // MAIN
@@ -158,132 +96,82 @@ client.once("clientReady", async () => {
     const guild = client.guilds.cache.first();
     if (!guild) return client.destroy();
 
-    console.log(`Scanning "${guild.name}"...`);
-
     const channels = await guild.channels.fetch();
 
     const relevantChannels = [];
 
-    channels.forEach(channel => {
-        if (!channel) return;
+    channels.forEach(c => {
+        if (!c) return;
 
-        const parentName = channel.parent?.name ?? "";
-        const isText = channel.type === ChannelType.GuildText;
-        const isSeason = /^s\d+$/.test(parentName);
+        const isText = c.type === ChannelType.GuildText;
+        const isSeason = /^s\d+$/.test(c.parent?.name ?? "");
 
         if (isText && isSeason) {
-            relevantChannels.push(channel);
+            relevantChannels.push(c);
         }
     });
 
-    console.log(`Found ${relevantChannels.length} channels\n`);
-
     const finalDecks = [];
 
-    // =================================================
-    // PROCESS CHANNELS
-    // =================================================
     for (const channel of relevantChannels) {
 
         console.log(`Scanning #${channel.name}`);
 
         try {
 
-            // IMPORTANT CHANGE:
-            // fetch MORE messages so we don't miss deep threads
             const messages = await channel.messages.fetch({ limit: 100 });
 
-            if (!messages.size) continue;
-
-            // =================================================
-            // FIX #2: SEARCH BACKWARDS (newest → oldest)
-            // =================================================
             const sorted = [...messages.values()]
                 .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
 
-            let deckMessage = null;
-            let deckCode = null;
+            const found = findDeckInMessages(sorted);
 
-            // BACKWARD scan prevents missing buried decks
-            for (const msg of sorted) {
-
-                const code = extractDeckCode(msg.content);
-
-                if (code) {
-                    deckMessage = msg;
-                    deckCode = code;
-                    break;
-                }
-            }
-
-            if (!deckMessage) {
+            if (!found) {
                 console.log("  No deck found.");
                 continue;
             }
 
-            // =================================================
-            // FIXED CONTEXT WINDOW (relative to actual position)
-            // =================================================
-            const fullSorted = [...messages.values()]
-                .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+            const deckMessage = sorted[found.index];
+            const deckCode = found.code;
 
-            const actualIndex = fullSorted.findIndex(m => m.id === deckMessage.id);
-
-            const window = fullSorted.slice(
-                Math.max(0, actualIndex - 5),
-                Math.min(fullSorted.length, actualIndex + 3)
-            );
+            const context = sorted.slice(found.index, found.index + 5);
 
             let record = null;
-            let authorName = deckMessage.author.username;
+            let author = deckMessage.author.username;
 
-            for (const msg of window) {
-
-                if (!record) {
-                    record = extractRecord(msg.content);
-                }
-
-                const creator = extractCreator(msg.content);
-                if (creator) {
-                    const resolved = await resolveUser(client, creator);
-                    if (resolved) authorName = resolved;
-                }
+            for (const msg of context) {
+                if (!record) record = extractRecord(msg.content);
             }
 
-            // =================================================
-            // NOTES
-            // =================================================
-            const cleanedNotes = window
+            const notes = context
                 .map(m => m.content)
                 .join("\n\n")
                 .replace(deckCode, "")
                 .trim();
 
-            // =================================================
-            // BUILD OBJECT
-            // =================================================
             finalDecks.push({
                 messageId: deckMessage.id,
                 season: channel.parent?.name,
                 channel: channel.name,
-                author: authorName,
+                author,
                 deckCode,
                 record,
-                notes: cleanedNotes,
+                notes,
                 publishedAt: deckMessage.createdAt.toISOString()
             });
 
             console.log("  ✔ Parsed deck");
 
-        } catch (err) {
-            console.error(`  Failed #${channel.name}:`, err.message);
+        } catch (e) {
+            console.error(`  Failed #${channel.name}:`, e.message);
         }
     }
 
-    // =================================================
-    // EXPORT
-    // =================================================
-    exportDecksToFile(finalDecks);
+    fs.writeFileSync(
+        OUTPUT_PATH,
+        JSON.stringify({ decks: finalDecks }, null, 2),
+        "utf8"
+    );
 
     console.log("\n======================");
     console.log(`TOTAL DECKS FOUND: ${finalDecks.length}`);
