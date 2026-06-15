@@ -37,8 +37,16 @@ function normalizeDeckCode(code) {
 
 function extractDeckCode(text) {
     if (!text) return null;
-    // Matches both standard base64 (+, /) and URL-safe base64 (-, _)
-    return text.match(/eyJ[A-Za-z0-9+/=\-_]+/)?.[0] ?? null;
+
+    // Split into lines, strip whitespace, filter empty
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+    for (const line of lines) {
+        const match = line.match(/eyJ[A-Za-z0-9+/=\-_]+/);
+        if (match) return match[0];
+    }
+
+    return null;
 }
 
 function extractRecord(text) {
