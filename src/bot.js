@@ -8,8 +8,8 @@ const {
     ChannelType
 } = require("discord.js");
 
-const fs = require("fs");
 const path = require("path");
+const fs = require("fs");
 
 const OUTPUT_PATH = path.join(__dirname, "..", "decks.json");
 
@@ -32,7 +32,8 @@ function extractDeckCode(text) {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
     for (const line of lines) {
-        const match = line.match(/eyJ[A-Za-z0-9+/=\-_]+/);
+        // stricter base64-ish JWT-like blob
+        const match = line.match(/eyJ[A-Za-z0-9+/=_-]{30,}/);
         if (match) return match[0];
     }
 
@@ -43,7 +44,6 @@ function extractRecord(text) {
     if (!text) return null;
 
     const cleaned = text.toLowerCase();
-
     let match;
 
     match = cleaned.match(/(\d{1,3})\s*[-–—]\s*(\d{1,3})/);
@@ -64,6 +64,11 @@ function extractRecord(text) {
     return null;
 }
 
+
+// =====================================================
+// CREATOR DETECTION
+// =====================================================
+
 function extractCreator(text) {
     if (!text) return null;
 
@@ -79,6 +84,11 @@ function extractCreator(text) {
     return null;
 }
 
+
+// =====================================================
+// USER RESOLVER
+// =====================================================
+
 async function resolveUser(client, creator) {
     try {
         if (creator.type === "id") {
@@ -90,6 +100,11 @@ async function resolveUser(client, creator) {
         return null;
     }
 }
+
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 function exportDecksToFile(decks) {
     fs.writeFileSync(
@@ -103,37 +118,7 @@ function exportDecksToFile(decks) {
 
 
 // =====================================================
-// 🔥 PAGINATED CHANNEL SCANNER (FIX)
-// =====================================================
-
-async function fetchAllMessages(channel) {
-
-    let all = [];
-    let lastId = null;
-
-    while (true) {
-        const options = { limit: 100 };
-        if (lastId) options.before = lastId;
-
-        const batch = await channel.messages.fetch(options);
-
-        if (!batch.size) break;
-
-        const msgs = [...batch.values()];
-        all.push(...msgs);
-
-        lastId = msgs[msgs.length - 1].id;
-
-        // safety cap (prevents infinite runaway in huge channels)
-        if (all.length > 5000) break;
-    }
-
-    return all;
-}
-
-
-// =====================================================
-// MAIN
+// MAIN PIPELINE
 // =====================================================
 
 client.once("clientReady", async () => {
@@ -148,61 +133,52 @@ client.once("clientReady", async () => {
         return;
     }
 
+    console.log(`\nScanning "${guild.name}"...`);
+
     const channels = await guild.channels.fetch();
 
     const relevantChannels = [];
 
-    channels.forEach(ch => {
+    channels.forEach(channel => {
+        if (!channel) return;
 
-        if (!ch) return;
+        const parentName = channel.parent?.name ?? "";
+        const isText = channel.type === ChannelType.GuildText;
+        const isSeason = /^s\d+$/.test(parentName);
 
-        const parent = ch.parent?.name ?? "";
-        const isText = ch.type === ChannelType.GuildText;
-
-        if (isText && /^s\d+$/.test(parent)) {
-            relevantChannels.push(ch);
+        if (isText && isSeason) {
+            relevantChannels.push(channel);
         }
     });
 
     console.log(`Found ${relevantChannels.length} relevant channels\n`);
 
     const finalDecks = [];
+    const seenDecks = new Set();
 
-    // =====================================================
-    // PROCESS
-    // =====================================================
     for (const channel of relevantChannels) {
 
         console.log(`Scanning #${channel.name}`);
 
         try {
+            const messages = await channel.messages.fetch({ limit: 100 });
 
-            // 🔥 FULL HISTORY FETCH
-            const messages = await fetchAllMessages(channel);
+            if (messages.size === 0) continue;
 
-            if (!messages.length) {
-                console.log("  No messages.");
-                continue;
-            }
-
-            // oldest → newest
-            const sorted = messages
+            const sorted = [...messages.values()]
                 .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
-            // =================================================
-            // FIND FIRST VALID DECK
-            // =================================================
             let deckIndex = -1;
             let deckMessage = null;
             let deckCode = null;
 
             for (let i = 0; i < sorted.length; i++) {
-
-                const code = extractDeckCode(sorted[i].content);
+                const msg = sorted[i];
+                const code = extractDeckCode(msg.content);
 
                 if (code) {
                     deckIndex = i;
-                    deckMessage = sorted[i];
+                    deckMessage = msg;
                     deckCode = code;
                     break;
                 }
@@ -213,28 +189,45 @@ client.once("clientReady", async () => {
                 continue;
             }
 
-            // =================================================
-            // CONTEXT WINDOW
-            // =================================================
+            if (seenDecks.has(deckCode)) {
+                console.log("  Duplicate deck skipped.");
+                continue;
+            }
+            seenDecks.add(deckCode);
+
             const window = sorted.slice(
                 Math.max(0, deckIndex - 5),
-                Math.min(sorted.length, deckIndex + 5)
+                Math.min(sorted.length, deckIndex + 3)
             );
 
-            let record = null;
+            // =================================================
+            // STRICT ANCHORING FIRST
+            // =================================================
+
+            let record = extractRecord(deckMessage.content);
             let authorName = deckMessage.author.username;
 
-            for (const msg of window) {
+            let creator = extractCreator(deckMessage.content);
 
-                if (!record) {
-                    record = extractRecord(msg.content);
-                }
+            // fallback only if missing core info
+            if (!record || !creator) {
+                for (const msg of window) {
 
-                const creator = extractCreator(msg.content);
-                if (creator) {
-                    const resolved = await resolveUser(client, creator);
-                    if (resolved) authorName = resolved;
+                    if (!record) {
+                        record = extractRecord(msg.content);
+                    }
+
+                    if (!creator) {
+                        creator = extractCreator(msg.content);
+                    }
+
+                    if (record && creator) break;
                 }
+            }
+
+            if (creator) {
+                const resolved = await resolveUser(client, creator);
+                if (resolved) authorName = resolved;
             }
 
             const cleanedNotes = window
@@ -256,8 +249,8 @@ client.once("clientReady", async () => {
 
             console.log("  ✔ Parsed deck");
 
-        } catch (err) {
-            console.error(`  Failed #${channel.name}:`, err.message);
+        } catch (error) {
+            console.error(`  Failed #${channel.name}:`, error.message);
         }
     }
 
