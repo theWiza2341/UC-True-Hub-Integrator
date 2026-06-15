@@ -147,21 +147,58 @@ function saveDecks(decks) {
     console.log("\n✔ decks.json updated");
 }
 
+// =====================================================
+// FULL HISTORY FETCHER
+// =====================================================
 
+async function fetchAllMessages(channel) {
+
+    let all = [];
+    let lastId = null;
+
+    while (true) {
+
+        const options = { limit: 100 };
+
+        if (lastId) {
+            options.before = lastId;
+        }
+
+        const batch = await channel.messages.fetch(options);
+
+        if (!batch.size) {
+            break;
+        }
+
+        const msgs = [...batch.values()];
+
+        all.push(...msgs);
+
+        lastId = msgs[msgs.length - 1].id;
+
+        // Prevent runaway scans
+        if (all.length > 5000) {
+            console.log("  Hit 5000 message cap.");
+            break;
+        }
+    }
+
+    return all;
+}
 // =====================================================
 // CHANNEL PROCESSOR
 // =====================================================
 
 async function processChannel(channel, { existingDecks, existingByChannel, existingByMessage, isNewSeason }) {
 
-    const messages = await channel.messages.fetch({ limit: 100 });
+    const messages = await fetchAllMessages(channel);
 
-    if (messages.size === 0) {
+    if (!messages.length) {
         console.log("  No messages.");
         return { result: "skip" };
     }
 
-    const sorted = [...messages.values()]
+    const sorted = messages
         .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
     // For known-season channels, skip if no new messages.
@@ -187,7 +224,9 @@ async function processChannel(channel, { existingDecks, existingByChannel, exist
         if (code) {
             deckMessage = msg;
             deckCode = code;
-            console.log(`  Found deck code in message ${msg.id} (position ${sorted.indexOf(msg) + 1}/${sorted.length})`);
+            console.log(
+                `  Found deck code (${sorted.indexOf(msg) + 1}/${sorted.length})`
+            );
             break;
         }
     }
@@ -210,7 +249,7 @@ async function processChannel(channel, { existingDecks, existingByChannel, exist
 
     const contextWindow = sorted.slice(
         Math.max(0, actualIndex - 5),
-        Math.min(sorted.length, actualIndex + 3)
+        Math.min(sorted.length, actualIndex + 5)
     );
 
     let record = null;
@@ -278,6 +317,7 @@ async function processChannel(channel, { existingDecks, existingByChannel, exist
 
         existingByChannel.set(channelKey, deckData);
         existingByMessage.add(deckMessage.id);
+        updated++;
         console.log("  ✔ Updated");
         return { result: "updated" };
     }
