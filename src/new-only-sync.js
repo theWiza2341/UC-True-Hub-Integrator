@@ -119,7 +119,7 @@ function loadExistingDecks() {
         const raw = fs.readFileSync(OUTPUT_PATH, "utf8");
         const parsed = JSON.parse(raw);
         return parsed.decks ?? [];
-    } catch (error) {
+    } catch {
         console.log("Failed to read decks.json — will do a full scan.");
         return [];
     }
@@ -132,6 +132,137 @@ function saveDecks(decks) {
         "utf8"
     );
     console.log("\n✔ decks.json updated");
+}
+
+
+// =====================================================
+// CHANNEL PROCESSOR
+// =====================================================
+
+async function processChannel(channel, { existingDecks, existingByChannel, existingByMessage, isNewSeason }) {
+
+    const messages = await channel.messages.fetch({ limit: 100 });
+
+    if (messages.size === 0) {
+        console.log("  No messages.");
+        return { result: "skip" };
+    }
+
+    const sorted = [...messages.values()]
+        .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+    // For channels in already-known seasons, skip if no new messages.
+    // For channels in a NEW season, always do a full scan.
+    if (!isNewSeason) {
+        const unseen = sorted.filter(msg => !existingByMessage.has(msg.id));
+        if (unseen.length === 0) {
+            console.log("  No new messages — skipping.");
+            return { result: "skip" };
+        }
+    }
+
+    // -------------------------
+    // Find deck message
+    // Search all messages so we don't miss the deck code
+    // if it was posted before the "unseen" window
+    // -------------------------
+    let deckMessage = null;
+    let deckCode = null;
+
+    for (const msg of sorted) {
+        const code = extractDeckCode(msg.content);
+        if (code) {
+            deckMessage = msg;
+            deckCode = code;
+            break;
+        }
+    }
+
+    if (!deckMessage) {
+        console.log("  No deck found.");
+        return { result: "skip" };
+    }
+
+    // -------------------------
+    // Context window
+    // -------------------------
+    const actualIndex = sorted.findIndex(msg => msg.id === deckMessage.id);
+
+    const contextWindow = sorted.slice(
+        Math.max(0, actualIndex - 5),
+        Math.min(sorted.length, actualIndex + 3)
+    );
+
+    let record = null;
+    let author = deckMessage.author.username;
+
+    for (const msg of contextWindow) {
+        if (!record) {
+            record = extractRecord(msg.content);
+        }
+
+        const creator = extractCreator(msg.content);
+        if (creator) {
+            const resolved = await resolveUser(client, creator);
+            if (resolved) {
+                author = resolved;
+                // don't break — record may still be found later
+            }
+        }
+    }
+
+    // -------------------------
+    // Build deck object
+    // -------------------------
+    const normalizedCode = normalizeDeckCode(deckCode);
+    const channelKey = `${channel.parent?.name}:${channel.name}`;
+
+    const deckData = {
+        messageId: deckMessage.id,
+        season: channel.parent?.name,
+        channel: channel.name,
+        author,
+        deckCode: normalizedCode,
+        record,
+        notes: contextWindow
+            .map(msg => msg.content)
+            .join("\n\n")
+            .replace(deckCode, "")
+            .trim(),
+        publishedAt: deckMessage.createdAt.toISOString()
+    };
+
+    const existing = existingByChannel.get(channelKey);
+
+    // New channel — add deck
+    if (!existing) {
+        existingDecks.push(deckData);
+        existingByChannel.set(channelKey, deckData);
+        existingByMessage.add(deckMessage.id);
+        console.log("  ✔ Added");
+        return { result: "added" };
+    }
+
+    // Known channel — update if deck code changed
+    if (existing.deckCode !== normalizedCode) {
+        const index = existingDecks.findIndex(
+            deck => deck.messageId === existing.messageId
+        );
+
+        if (index !== -1) {
+            existingDecks[index] = deckData;
+        } else {
+            existingDecks.push(deckData);
+        }
+
+        existingByChannel.set(channelKey, deckData);
+        existingByMessage.add(deckMessage.id);
+        console.log("  ✔ Updated");
+        return { result: "updated" };
+    }
+
+    console.log("  No changes.");
+    return { result: "unchanged" };
 }
 
 
@@ -157,20 +288,18 @@ client.once("clientReady", async () => {
     // Load existing data
     // -----------------------------------------------
     const existingDecks = loadExistingDecks();
-
     console.log(`Loaded ${existingDecks.length} existing deck(s).`);
 
     // -----------------------------------------------
     // Build lookup maps from existing decks
-    // Key: "season:channel" (e.g. "s3:aggro-red")
+    // Key format: "s118:skt-evil-kindness"
     // -----------------------------------------------
     const existingByChannel = new Map();
     const existingByMessage = new Set();
 
     for (const deck of existingDecks) {
         if (deck.season && deck.channel) {
-            const key = `${deck.season}:${deck.channel}`;
-            existingByChannel.set(key, deck);
+            existingByChannel.set(`${deck.season}:${deck.channel}`, deck);
         }
         if (deck.messageId) {
             existingByMessage.add(deck.messageId);
@@ -188,7 +317,7 @@ client.once("clientReady", async () => {
                 const match = String(deck.season).match(/^s(\d+)$/i);
                 return match ? Number(match[1]) : null;
             })
-            .filter(value => value !== null);
+            .filter(n => n !== null);
 
         if (seasonNumbers.length > 0) {
             latestSeason = Math.max(...seasonNumbers);
@@ -202,13 +331,15 @@ client.once("clientReady", async () => {
     );
 
     // -----------------------------------------------
-    // Fetch all channels and filter to season text channels
-    // Includes: any season >= latestSeason (catches new seasons too)
-    // If no existing data: scan everything
+    // Fetch all channels and sort into two buckets:
+    //   - currentSeasonChannels: season === latestSeason (check for updates)
+    //   - newSeasonChannels:     season >  latestSeason  (always full scan)
+    // If no existing data, treat everything as new.
     // -----------------------------------------------
     const channels = await guild.channels.fetch();
 
-    const relevantChannels = [];
+    const currentSeasonChannels = [];
+    const newSeasonChannels = [];
 
     channels.forEach(channel => {
         if (!channel) return;
@@ -221,156 +352,62 @@ client.once("clientReady", async () => {
 
         const seasonNumber = Number(match[1]);
 
-        // Always include if no prior data exists,
-        // or if the season is >= the latest known season.
-        // This naturally picks up brand-new seasons.
-        if (latestSeason === null || seasonNumber >= latestSeason) {
-            relevantChannels.push(channel);
+        if (latestSeason === null || seasonNumber > latestSeason) {
+            newSeasonChannels.push(channel);
+        } else if (seasonNumber === latestSeason) {
+            currentSeasonChannels.push(channel);
         }
+        // seasons below latestSeason are intentionally skipped
     });
 
-    console.log(`Scanning ${relevantChannels.length} channel(s)...`);
+    console.log(`New season channels to scan: ${newSeasonChannels.length}`);
+    console.log(`Current season channels to check: ${currentSeasonChannels.length}`);
+
+    if (newSeasonChannels.length > 0) {
+        const newSeasonNums = [...new Set(
+            newSeasonChannels.map(c => c.parent?.name)
+        )].join(", ");
+        console.log(`\n🆕 New season(s) discovered: ${newSeasonNums}`);
+    }
 
     let added = 0;
     let updated = 0;
 
+    const context = { existingDecks, existingByChannel, existingByMessage };
+
     // -----------------------------------------------
-    // Process channels
+    // Process new season channels first (full scan, no skipping)
     // -----------------------------------------------
-    for (const channel of relevantChannels) {
+    if (newSeasonChannels.length > 0) {
+        console.log("\n--- Scanning new season(s) ---");
 
-        console.log(`\nScanning #${channel.name}`);
-
-        try {
-
-            const messages = await channel.messages.fetch({ limit: 100 });
-
-            if (messages.size === 0) {
-                console.log("No messages.");
-                continue;
+        for (const channel of newSeasonChannels) {
+            console.log(`\n#${channel.name} [${channel.parent?.name}]`);
+            try {
+                const { result } = await processChannel(channel, { ...context, isNewSeason: true });
+                if (result === "added") added++;
+                if (result === "updated") updated++;
+            } catch (error) {
+                console.error(`  Failed:`, error.message);
             }
+        }
+    }
 
-            const sorted = [...messages.values()]
-                .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    // -----------------------------------------------
+    // Process current season channels (skip if no new messages)
+    // -----------------------------------------------
+    if (currentSeasonChannels.length > 0) {
+        console.log("\n--- Checking current season for updates ---");
 
-            // Skip channels where every message is already known
-            const unseen = sorted.filter(msg => !existingByMessage.has(msg.id));
-
-            if (unseen.length === 0) {
-                console.log("No new messages — skipping.");
-                continue;
+        for (const channel of currentSeasonChannels) {
+            console.log(`\n#${channel.name} [${channel.parent?.name}]`);
+            try {
+                const { result } = await processChannel(channel, { ...context, isNewSeason: false });
+                if (result === "added") added++;
+                if (result === "updated") updated++;
+            } catch (error) {
+                console.error(`  Failed:`, error.message);
             }
-
-            // -------------------------
-            // Find deck message (search unseen messages only)
-            // -------------------------
-            let deckMessage = null;
-            let deckCode = null;
-
-            for (const msg of unseen) {
-                const code = extractDeckCode(msg.content);
-                if (code) {
-                    deckMessage = msg;
-                    deckCode = code;
-                    break;
-                }
-            }
-
-            if (!deckMessage) {
-                console.log("No deck found.");
-                continue;
-            }
-
-            // -------------------------
-            // Context window
-            // Uses full sorted history so surrounding context
-            // (even already-known messages) can inform the deck
-            // -------------------------
-            const actualIndex = sorted.findIndex(msg => msg.id === deckMessage.id);
-
-            const contextWindow = sorted.slice(
-                Math.max(0, actualIndex - 5),
-                Math.min(sorted.length, actualIndex + 3)
-            );
-
-            let record = null;
-            let author = deckMessage.author.username;
-
-            for (const msg of contextWindow) {
-                if (!record) {
-                    record = extractRecord(msg.content);
-                }
-
-                const creator = extractCreator(msg.content);
-                if (creator) {
-                    const resolved = await resolveUser(client, creator);
-                    if (resolved) {
-                        author = resolved;
-                        // don't break — record may still be found later
-                    }
-                }
-            }
-
-            // -------------------------
-            // Build deck object
-            // -------------------------
-            const normalizedCode = normalizeDeckCode(deckCode);
-            const channelKey = `${channel.parent?.name}:${channel.name}`;
-
-            const deckData = {
-                messageId: deckMessage.id,
-                season: channel.parent?.name,
-                channel: channel.name,
-                author,
-                deckCode: normalizedCode,
-                record,
-                notes: contextWindow
-                    .map(msg => msg.content)
-                    .join("\n\n")
-                    .replace(deckCode, "")
-                    .trim(),
-                publishedAt: deckMessage.createdAt.toISOString()
-            };
-
-            const existing = existingByChannel.get(channelKey);
-
-            // -------------------------
-            // New channel — add deck
-            // -------------------------
-            if (!existing) {
-                existingDecks.push(deckData);
-                existingByChannel.set(channelKey, deckData);
-                existingByMessage.add(deckMessage.id);
-                added++;
-                console.log("✔ Added");
-                continue;
-            }
-
-            // -------------------------
-            // Known channel — update if deck code changed
-            // -------------------------
-            if (existing.deckCode !== normalizedCode) {
-                const index = existingDecks.findIndex(
-                    deck => deck.messageId === existing.messageId
-                );
-
-                if (index !== -1) {
-                    existingDecks[index] = deckData;
-                } else {
-                    // Fallback: push if somehow not found by messageId
-                    existingDecks.push(deckData);
-                }
-
-                existingByChannel.set(channelKey, deckData);
-                existingByMessage.add(deckMessage.id);
-                updated++;
-                console.log("✔ Updated");
-            } else {
-                console.log("No changes.");
-            }
-
-        } catch (error) {
-            console.error(`Failed #${channel.name}:`, error.message);
         }
     }
 
