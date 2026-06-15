@@ -366,12 +366,10 @@ client.once(
             // fall back to full scan
             if (
                 latestSeason === null ||
-                seasonNumber === latestSeason
+                seasonNumber >= latestSeason
             ) {
-
-                relevantChannels.push(
-                    channel
-                );
+                relevantChannels.push(channel);
+            }
 
             }
 
@@ -384,11 +382,9 @@ client.once(
         // -----------------------------
         // Track channels already known
         // -----------------------------
-        const existingByChannel = new Map(
-            existingDecks.map(deck => [
-                `${deck.season}:${deck.channel}`,
-                deck
-            ])
+        existingByChannel.set(
+            `${channel.parent?.name}:${channel.name}`,
+            deckData
         );
 
         const existingByMessage = new Set(
@@ -507,53 +503,69 @@ client.once(
                 }
 
                 // -------------------------
-                // Creator detection
+                // Context window
                 // -------------------------
-                const window =
-                    sorted.slice(
-                        deckIndex,
-                        deckIndex + 3
+                const actualIndex =
+                    sorted.findIndex(
+                        msg => msg.id === deckMessage.id
                     );
 
-                let author =
-                    deckMessage.author
-                        .username;
+                const window =
+                    sorted.slice(
+                        Math.max(0, actualIndex - 5),
+                        Math.min(sorted.length, actualIndex + 3)
+                    );
 
-                for (
-                    const msg of window
-                ) {
+                let record = null;
 
-                    const creator =
-                        extractCreator(
+            let author =
+                deckMessage.author
+                    .username;
+
+            for (
+                const msg of window
+            ) {
+
+                if (!record) {
+
+                    record =
+                        extractRecord(
                             msg.content
                         );
 
-                    if (
-                        !creator
-                    ) {
+                }
 
-                        continue;
+                const creator =
+                    extractCreator(
+                        msg.content
+                    );
 
-                    }
+                if (
+                    !creator
+                ) {
 
-                    const resolved =
-                        await resolveUser(
-                            client,
-                            creator
-                        );
-
-                    if (
-                        resolved
-                    ) {
-
-                        author =
-                            resolved;
-
-                        break;
-
-                    }
+                    continue;
 
                 }
+
+                const resolved =
+                    await resolveUser(
+                        client,
+                        creator
+                    );
+
+                if (
+                    resolved
+                ) {
+
+                    author =
+                        resolved;
+
+                    // don't break;
+                    // record may still exist later
+                }
+
+            }
 
                 // -------------------------
                 // Build deck object
@@ -580,13 +592,14 @@ client.once(
                     deckCode:
                         normalizedCode,
 
-                    record:
-                        extractRecord(
-                            deckMessage.content
-                        ),
+                    record,
 
                     notes:
-                        deckMessage.content
+                        window
+                            .map(
+                                msg => msg.content
+                            )
+                            .join("\n\n")
                             .replace(
                                 deckCode,
                                 ""
@@ -648,7 +661,7 @@ client.once(
                         deckData;
 
                     existingByChannel.set(
-                        channel.name,
+                        `${channel.parent?.name}:${channel.name}`,
                         deckData
                     );
 
