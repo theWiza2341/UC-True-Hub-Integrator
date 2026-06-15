@@ -161,7 +161,7 @@ client.once("clientReady", async () => {
         console.log(`Scanning #${channel.name}`);
 
         try {
-            const messages = await channel.messages.fetch({ limit: 100 });
+            const messages = await fetchAllMessages(channel);
 
             if (messages.size === 0) continue;
 
