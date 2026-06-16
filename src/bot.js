@@ -188,6 +188,8 @@ client.once("clientReady", async () => {
             // oldest → newest
             const sorted = messages
                 .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+            
+            const firstMessage = sorted[0];
 
             // =================================================
             // FIND FIRST VALID DECK
@@ -217,12 +219,12 @@ client.once("clientReady", async () => {
             // CONTEXT WINDOW
             // =================================================
             const window = sorted.slice(
-                Math.max(0, deckIndex - 5),
+                0,
                 Math.min(sorted.length, deckIndex + 5)
             );
 
             let record = null;
-            let authorName = deckMessage.author.username;
+            let authorName = firstMessage.author.username;
 
             for (const msg of window) {
 
@@ -251,7 +253,7 @@ client.once("clientReady", async () => {
                 deckCode,
                 record,
                 notes: cleanedNotes,
-                publishedAt: deckMessage.createdAt.toISOString()
+                publishedAt: firstMessage.createdAt.toISOString()
             });
 
             console.log("  ✔ Parsed deck");
