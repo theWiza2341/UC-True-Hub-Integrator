@@ -159,7 +159,7 @@ client.once("clientReady", async () => {
         const parent = ch.parent?.name ?? "";
         const isText = ch.type === ChannelType.GuildText;
 
-        if (isText && /^s\d+$/.test(parent)) {
+        if (isText && /^s\d+/i.test(parent)) {
             relevantChannels.push(ch);
         }
     });
