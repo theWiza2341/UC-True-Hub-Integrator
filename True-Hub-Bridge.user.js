@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         True Hub Bridge - Underscript Plugin
 // @namespace    truehubbridge
-// @version      1.0
+// @version      1.1
 // @description  True Hub overlay for Undercards Hub
 // @match        https://undercards.net/*Hub*
 // @icon         https://i.imgur.com/7RClLvE.png
@@ -13,11 +13,11 @@
     'use strict';
 
     const PLUGIN_NAME = "True Hub Bridge";
-    const PLUGIN_VERSION = "1.0";
+    const PLUGIN_VERSION = "1.1";
     const UPDATE_URL =
     "https://raw.githubusercontent.com/theWiza2341/UC-True-Hub-Integrator/main/True-Hub-Bridge.js";
     const DOWNLOAD_URL =
-    "https://raw.githubusercontent.com/theWiza2341/UC-True-Hub-Integrator/main/True-Hub-Bridge.js";
+    "https://github.com/theWiza2341/UC-True-Hub-Integrator/raw/refs/heads/main/True-Hub-Bridge.js";
     let thPlugin = null;
     let thSettings = null;
 
