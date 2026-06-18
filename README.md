@@ -13,7 +13,7 @@ Advanced Filtering
 
 Filter decks by:
 
--Soul
+- Soul
 - Included cards
 - Excluded cards
 - Deck name / search text
