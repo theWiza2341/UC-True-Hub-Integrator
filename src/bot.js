@@ -42,7 +42,10 @@ function extractDeckCode(text) {
 function extractRecord(text) {
     if (!text) return null;
 
-    const cleaned = text.toLowerCase();
+    const cleaned = text
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/www\.\S+/gi, "")
+    .toLowerCase();
 
     let match;
 
