@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         True Hub Bridge - Underscript Plugin
 // @namespace    truehubbridge
-// @version      1.0
+// @version      1.1
 // @description  True Hub overlay for Undercards Hub
 // @match        https://undercards.net/*Hub*
 // @grant        GM_xmlhttpRequest
@@ -12,7 +12,11 @@
     'use strict';
 
     const PLUGIN_NAME = "True Hub Bridge";
-    const PLUGIN_VERSION = "1.0";
+    const PLUGIN_VERSION = "1.1";
+    const UPDATE_URL =
+    "https://raw.githubusercontent.com/theWiza2341/UC-True-Hub-Integrator/main/True-Hub-Bridge.js";
+    const DOWNLOAD_URL =
+    "https://raw.githubusercontent.com/theWiza2341/UC-True-Hub-Integrator/main/True-Hub-Bridge.js";
     let thPlugin = null;
     let thSettings = null;
 
@@ -40,11 +44,48 @@
         if (!thPlugin) return;
 
         try {
+
             thSettings = thPlugin.settings();
-            console.log("[TrueHub] UnderScript settings initialized.");
+
+            thSettings.add({
+                key: "autoOpenTrueHub",
+                name: "Auto Open True Hub",
+                category: "General",
+                type: "boolean",
+                default: true,
+
+                onChange(value) {
+                    autoOpenTrueHub = value;
+                }
+            });
+
+            thSettings.add({
+                key: "enableScrollPaging",
+                name: "Enable Scroll Paging",
+                category: "General",
+                type: "boolean",
+                default: true,
+
+                onChange(value) {
+                    enableScrollPaging = value;
+                }
+            });
+
+            autoOpenTrueHub =
+                thSettings.get?.("autoOpenTrueHub") ?? true;
+
+            enableScrollPaging =
+                thSettings.get?.("enableScrollPaging") ?? true;
+
+            console.log(
+                "[TrueHub] UnderScript settings initialized."
+            );
         }
         catch (err) {
-            console.error("[TrueHub] Settings init failed:", err);
+            console.error(
+                "[TrueHub] Settings init failed:",
+                err
+            );
         }
     }
 
@@ -68,6 +109,18 @@
                 PLUGIN_NAME,
                 PLUGIN_VERSION
             );
+
+            try {
+                thPlugin.updater?.({
+                    updateURL: UPDATE_URL,
+                    downloadURL: DOWNLOAD_URL
+                });
+
+                console.log("[TrueHub] Updater registered.");
+            }
+            catch (err) {
+                console.error("[TrueHub] Updater registration failed:", err);
+            }
 
             console.log(
                 "[TrueHub] Connected to UnderScript."
@@ -546,6 +599,8 @@
     let filteredDecks = [];
     let currentPage   = 1;
     let mode          = "classic";
+    let autoOpenTrueHub = true;
+    let enableScrollPaging = true;
 
     // Card filter state
     // Each entry: { id, name }
@@ -1581,6 +1636,7 @@
             trueHubList.id = "truehub-list";
 
             trueHubList.addEventListener("wheel", (e) => {
+                if (!enableScrollPaging) return;
                 if (mode !== "true") return;
                 e.preventDefault();
 
@@ -1601,6 +1657,22 @@
 
             buildTrueHubNav();
             buildToggle();
+
+            if (autoOpenTrueHub) {
+
+                const toggleBtn =
+                      document.getElementById("truehub-switch");
+
+                console.log(
+                    "[TrueHub] Auto Open:",
+                    autoOpenTrueHub,
+                    toggleBtn
+                );
+
+                if (toggleBtn) {
+                    toggleBtn.click();
+                }
+            }
 
             console.log("[TrueHub] Ready. Decks loaded:", allDecks.length);
         });
