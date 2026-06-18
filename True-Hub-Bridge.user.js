@@ -14,9 +14,9 @@
     const PLUGIN_NAME = "True Hub Bridge";
     const PLUGIN_VERSION = "1.1";
     const UPDATE_URL =
-    "https://raw.githubusercontent.com/theWiza2341/UC-True-Hub-Integrator/main/True-Hub-Bridge.js";
+    "https://raw.githubusercontent.com/theWiza2341/UC-True-Hub-Integrator/main/True-Hub-Bridge.user.js";
     const DOWNLOAD_URL =
-    "https://raw.githubusercontent.com/theWiza2341/UC-True-Hub-Integrator/main/True-Hub-Bridge.js";
+    "https://raw.githubusercontent.com/theWiza2341/UC-True-Hub-Integrator/main/True-Hub-Bridge.user.js";
     let thPlugin = null;
     let thSettings = null;
 
