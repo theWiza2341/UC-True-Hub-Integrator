@@ -13,10 +13,10 @@ Advanced Filtering
 
 Filter decks by:
 
-Soul
-Included cards
-Excluded cards
-Deck name / search text
+-Soul
+- Included cards
+- Excluded cards
+- Deck name / search text
 
 Filters can be combined to quickly locate specific deck archetypes.
 
