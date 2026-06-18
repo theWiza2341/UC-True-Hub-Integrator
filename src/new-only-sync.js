@@ -52,8 +52,10 @@ function extractDeckCode(text) {
 function extractRecord(text) {
     if (!text) return null;
 
-    const cleaned = text.toLowerCase();
-    let match;
+    const cleaned = text
+        .replace(/https?:\/\/\S+/gi, "")
+        .replace(/www\.\S+/gi, "")
+        .toLowerCase();
 
     // 17-3 / 17 - 3 / unicode dashes
     match = cleaned.match(/(\d{1,3})\s*[-–—]\s*(\d{1,3})/);
